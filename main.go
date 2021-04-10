@@ -35,12 +35,8 @@ func main() {
 
 	cmd := commands.NewCmd(args[0])
 	args = args[1:]
-
-	// Validate arguments
-	if argsErr := cmd.Validate(args...); argsErr != nil {
-		log.Fatal("arguments not valid.", argsErr.Error())
+	// Validate arguments and execute command
+	if argsErr := cmd.Execute(args...); argsErr != nil {
+		log.Fatal("error runnning command", argsErr.Error())
 	}
-
-	// Execute Command
-	cmd.Execute()
 }
