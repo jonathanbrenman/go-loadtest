@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"go-loadtest/commands"
 	"log"
 	"os"
@@ -27,6 +28,17 @@ func validateCommand(cmd string) bool {
 }
 
 func main() {
+	welcomeMessage := fmt.Sprintf("%s\n", `
+ _______  _______        ___      _______  _______  ______   _______  _______  _______  _______ 
+|       ||       |      |   |    |       ||   _   ||      | |       ||       ||       ||       |
+|    ___||   _   | ____ |   |    |   _   ||  |_|  ||  _    ||_     _||    ___||  _____||_     _|
+|   | __ |  | |  ||____||   |    |  | |  ||       || | |   |  |   |  |   |___ | |_____   |   |  
+|   ||  ||  |_|  |      |   |___ |  |_|  ||       || |_|   |  |   |  |    ___||_____  |  |   |  
+|   |_| ||       |      |       ||       ||   _   ||       |  |   |  |   |___  _____| |  |   |  
+|_______||_______|      |_______||_______||__| |__||______|   |___|  |_______||_______|  |___|  
+`)
+	fmt.Println(welcomeMessage)
+
 	args := os.Args[1:]
 	// Validate commands
 	if ok := validateCommand(args[0]); !ok {
