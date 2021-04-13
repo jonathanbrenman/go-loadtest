@@ -2,14 +2,16 @@ package clients
 
 import (
 	"bytes"
+	"go-loadtest/models"
 	"log"
 	"net/http"
 	"sync"
+	"time"
 )
 
 type HttClient interface {
-	Get(ch chan<- int, wg *sync.WaitGroup)
-	Post(ch chan<- int, wg *sync.WaitGroup)
+	Get(ch chan<-models.ResponseRoutine, wg *sync.WaitGroup)
+	Post(ch chan<-models.ResponseRoutine, wg *sync.WaitGroup)
 }
 
 type httpClientImpl struct {
@@ -25,20 +27,27 @@ func NewHttpClient(url, method, payload string) HttClient {
 	}
 }
 
-func (h httpClientImpl) Get(ch chan<- int, wg *sync.WaitGroup) {
+func (h httpClientImpl) Get(ch chan<-models.ResponseRoutine, wg *sync.WaitGroup) {
+	start := time.Now()
 	defer wg.Done()
 	resp, err := http.Get(h.url)
 	if err != nil {
 		log.Println("Error doing get request", err.Error())
 	}
+	since := time.Since(start)
+	response := models.ResponseRoutine{
+		Code: resp.StatusCode,
+		Time: since,
+	}
 	if resp != nil {
-		ch <- resp.StatusCode
+		ch <- response
 	} else {
-		ch <- 0
+		ch <- models.ResponseRoutine{}
 	}
 }
 
-func (h httpClientImpl) Post(ch chan<- int, wg *sync.WaitGroup) {
+func (h httpClientImpl) Post(ch chan<-models.ResponseRoutine, wg *sync.WaitGroup) {
+	start := time.Now()
 	defer wg.Done()
 	req, err := http.NewRequest("POST", h.url, bytes.NewBuffer([]byte(h.payload)))
 	client := &http.Client{}
@@ -47,9 +56,14 @@ func (h httpClientImpl) Post(ch chan<- int, wg *sync.WaitGroup) {
 		log.Println("Error doing post request", err.Error())
 	}
 	defer resp.Body.Close()
+	since := time.Since(start)
+	response := models.ResponseRoutine{
+		Code: resp.StatusCode,
+		Time: since,
+	}
 	if resp != nil {
-		ch <- resp.StatusCode
+		ch <- response
 	} else {
-		ch <- 0
+		ch <- models.ResponseRoutine{}
 	}
 }
