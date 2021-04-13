@@ -38,6 +38,9 @@ func main() {
 |_______||_______|      |_______||_______||__| |__||______|   |___|  |_______||_______|  |___|  
 `)
 	fmt.Println(welcomeMessage)
+	if len(os.Args) == 0 {
+		log.Fatal("Command not valid. this are the allowed commands: ", allowedCommands)
+	}
 
 	args := os.Args[1:]
 	// Validate commands
