@@ -3,7 +3,9 @@ package events
 import (
 	"errors"
 	"fmt"
+	"github.com/schollz/progressbar/v3"
 	"go-loadtest/clients"
+	"go-loadtest/models"
 	"strconv"
 	"sync"
 	"time"
@@ -15,6 +17,7 @@ type LoadTestImpl struct {
 	method string
 	payload string
 	time time.Duration
+	locker sync.Mutex
 }
 
 func NewLoadTest() Event {
@@ -63,7 +66,7 @@ func (l LoadTestImpl) Execute(args ...string) error {
 }
 
 func (l LoadTestImpl) Start() string {
-	ch := make(chan int)
+	ch := make(chan models.ResponseRoutine)
 	var wg sync.WaitGroup
 
 	httpClient := clients.NewHttpClient(l.host, l.method, l.payload)
@@ -75,8 +78,8 @@ func (l LoadTestImpl) Start() string {
 	start := time.Now()
 	end := start.Add(l.time)
 
+	bar := progressbar.Default(100)
 	for end.After(time.Now()) {
-		fmt.Printf("performing %d requests to %s \n", l.concurrency, l.host)
 		for i := 0; i < int(l.concurrency); i++ {
 			wg.Add(1)
 			switch l.method {
@@ -91,6 +94,7 @@ func (l LoadTestImpl) Start() string {
 				break
 			}
 		}
+		bar.Add(int(l.concurrency) * 100 / (int(l.concurrency) * int(l.time.Seconds())))
 		time.Sleep(1 * time.Second)
 	}
 
@@ -99,14 +103,36 @@ func (l LoadTestImpl) Start() string {
 		close(ch)
 	}()
 
-	cnSuccess := 0
-	cnError := 0
+	responseCodes := make(map[int]struct{
+		Code int
+		Counter int
+	})
+
+	var avgTime time.Duration
+	total := 0
+
 	for res := range ch {
-		if res == 200 {
-			cnSuccess++
+		l.locker.Lock()
+		if responseCodes[res.Code].Counter != 0 {
+			responseCodes[res.Code] = struct {
+				Code    int
+				Counter int
+			}{Code: res.Code, Counter: responseCodes[res.Code].Counter + 1}
 		} else {
-			cnError++
+			responseCodes[res.Code] = struct {
+				Code    int
+				Counter int
+			}{Code: res.Code, Counter: 1}
 		}
+		avgTime += res.Time
+		total++
+		l.locker.Unlock()
 	}
-	return fmt.Sprintf("Successed: %d, Failed: %d\n", cnSuccess, cnError)
+	response := "\n-----------------------------------\nResult:\n-----------------------------------\n"
+	for k, _ := range responseCodes {
+		response += fmt.Sprintf("http code: %d count: %d \n", responseCodes[k].Code, responseCodes[k].Counter)
+	}
+	response += fmt.Sprintf("response time avg: %vms\n", avgTime.Milliseconds() / int64(total))
+	response += "-----------------------------------\n"
+	return response
 }
