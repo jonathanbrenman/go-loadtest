@@ -39,6 +39,10 @@ func main() {
 `)
 	fmt.Println(welcomeMessage)
 
+	if len(os.Args) <= 1 {
+		log.Fatal("Command not valid. this are the allowed commands: ", allowedCommands)
+	}
+
 	args := os.Args[1:]
 	// Validate commands
 	if ok := validateCommand(args[0]); !ok {
